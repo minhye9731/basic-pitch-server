@@ -16,11 +16,22 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@app.route('/', methods=['GET'])
+def home():
+    """홈페이지"""
+    return jsonify({
+        'message': 'Basic Pitch MIDI Converter API',
+        'endpoints': {
+            'status': '/api/status',
+            'convert': '/api/convert'
+        }
+    })
+
 @app.route('/api/status', methods=['GET'])
 def status_check():
     """서버 상태 확인"""
     return jsonify({
-        'status': 'status',
+        'status': 'running',
         'service': 'Basic Pitch MIDI Converter',
         'version': '1.0.0'
     })
@@ -113,9 +124,9 @@ def convert_audio():
             'details': str(e)
         }), 500
 
-# Vercel 핸들러
-def handler(request):
-    return app(request.environ, lambda status, headers: None)
+# Vercel을 위한 핸들러
+def handler(environ, start_response):
+    return app(environ, start_response)
 
 if __name__ == '__main__':
     # 로컬 테스트용
