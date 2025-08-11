@@ -1,0 +1,12 @@
+{
+  "functions": {
+    "api/convert.py": {
+      "maxDuration": 120
+    }
+  },
+  "build": {
+    "env": {
+      "PYTHONPATH": "/var/task"
+    }
+  }
+}
