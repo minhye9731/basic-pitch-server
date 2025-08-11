@@ -1,13 +1,6 @@
 {
-  "version": 2,
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "app.py"
-    }
-  ],
   "functions": {
-    "app.py": {
+    "api/convert.py": {
       "maxDuration": 30
     }
   }
