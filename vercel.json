@@ -1,12 +1,20 @@
 {
-  "functions": {
-    "api/convert.py": {
-      "maxDuration": 120
+  "version": 2,
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python"
     }
-  },
-  "build": {
-    "env": {
-      "PYTHONPATH": "/var/task"
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.py"
+    }
+  ],
+  "functions": {
+    "app.py": {
+      "maxDuration": 30
     }
   }
 }
