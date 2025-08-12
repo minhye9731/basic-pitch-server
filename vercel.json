@@ -1,8 +1,7 @@
 {
   "functions": {
     "api/convert.py": {
-      "maxDuration": 30,
-      "runtime": "python3.10"
+      "maxDuration": 30
     }
   }
 }
