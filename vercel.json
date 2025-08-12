@@ -2,6 +2,9 @@
   "functions": {
     "api/convert.py": {
       "maxDuration": 30
+    },
+    "api/health.py": {
+      "maxDuration": 10
     }
   }
 }
