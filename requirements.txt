@@ -1,6 +1,6 @@
 setuptools
 wheel
-basic-pitch[tf]=0.4.0
+basic-pitch[tf]==0.4.0
 flask==2.3.3
 numpy>=1.24.0
 librosa>=0.10.1
