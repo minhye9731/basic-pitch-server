@@ -1,18 +1,15 @@
-# Python 3.12 호환 버전들
+
+# Python 3.11 호환 버전들
 setuptools
 wheel
-
-# TensorFlow (Python 3.12 호환)
-tensorflow>=2.16.1
-
-# 오디오 처리 (최신 호환 버전)
+# TensorFlow (Python 3.11 호환)
+tensorflow>=2.15.0,<2.16.0
+# 오디오 처리 (Python 3.11 호환 버전)
 librosa>=0.10.1
 soundfile>=0.12.1
-numpy>=1.24.0
+numpy>=1.24.0,<1.25.0
 scipy>=1.11.0
-
 # MIDI 처리
 pretty-midi>=0.2.10
-
-# Basic Pitch (최신 버전)
+# Basic Pitch (Python 3.11까지 지원)
 basic-pitch>=0.4.0
