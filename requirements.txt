@@ -1,8 +1,18 @@
+# 기본 패키지
 setuptools
 wheel
-basic-pitch[tf]==0.4.0
-flask==2.3.3
-numpy>=1.24.0
-librosa>=0.10.1
-soundfile>=0.12.1
-werkzeug>=2.3.7
+
+# TensorFlow (Python 3.9 호환)
+tensorflow==2.11.0
+
+# 오디오 처리
+librosa==0.10.1
+soundfile==0.12.1
+numpy==1.23.5
+scipy==1.10.1
+
+# MIDI 처리
+pretty-midi==0.2.10
+
+# Basic Pitch 
+basic-pitch==0.3.2
