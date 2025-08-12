@@ -5,7 +5,6 @@
   ],
   "functions": {
     "api/convert.py": {
-      "runtime": "python3.9",
       "maxDuration": 30
     },
     "api/health.py": {
