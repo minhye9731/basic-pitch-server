@@ -1,11 +1,13 @@
-from flask import Flask, request, send_file, jsonify
-from basic_pitch.inference import predict
-from basic_pitch import ICASSP_2022_MODEL_PATH
+from http.server import BaseHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs
+import json
 import tempfile
 import os
 import io
-from werkzeug.utils import secure_filename
+from basic_pitch.inference import predict
+from basic_pitch import ICASSP_2022_MODEL_PATH
 import traceback
+import cgi
 
 # 설정
 ALLOWED_EXTENSIONS = {'wav', 'mp3', 'flac', 'm4a', 'aac', 'ogg'}
@@ -14,64 +16,82 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def handler(request):
-    """Vercel 서버리스 함수 핸들러"""
+class handler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        """CORS preflight 처리"""
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
     
-    # CORS 헤더 추가
-    headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-    }
-    
-    # OPTIONS 요청 처리 (CORS preflight)
-    if request.method == 'OPTIONS':
-        return ('', 200, headers)
-    
-    # GET 요청 - API 정보
-    if request.method == 'GET':
-        return jsonify({
-            'message': 'Basic Pitch MIDI Converter API',
-            'endpoint': '/api/convert',
+    def do_GET(self):
+        """GET 요청 - API 정보"""
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        
+        response_data = {
+            'message': 'Basic Pitch MIDI Converter',
             'method': 'POST',
             'supported_formats': list(ALLOWED_EXTENSIONS),
             'max_file_size': '10MB'
-        }), 200, headers
+        }
+        
+        self.wfile.write(json.dumps(response_data).encode())
     
-    # POST 요청 - 변환 처리
-    if request.method == 'POST':
+    def do_POST(self):
+        """POST 요청 - 변환 처리"""
         try:
             print("🎵 변환 요청 받음")
             
-            # 파일 검증
-            if 'file' not in request.files:
-                return jsonify({'error': 'No file provided'}), 400, headers
-                
-            file = request.files['file']
-            if file.filename == '':
-                return jsonify({'error': 'No file selected'}), 400, headers
-                
-            print(f"📁 파일명: {file.filename}")
+            # Content-Type 확인
+            content_type = self.headers.get('Content-Type', '')
+            if not content_type.startswith('multipart/form-data'):
+                self._send_error(400, 'Content-Type must be multipart/form-data')
+                return
             
-            if not allowed_file(file.filename):
-                return jsonify({'error': f'Unsupported file type. Allowed: {ALLOWED_EXTENSIONS}'}), 400, headers
+            # 파일 파싱
+            form = cgi.FieldStorage(
+                fp=self.rfile,
+                headers=self.headers,
+                environ={'REQUEST_METHOD': 'POST'}
+            )
             
-            # 파일 읽기 및 크기 확인
-            file_content = file.read()
-            file_size = len(file_content)
+            if 'file' not in form:
+                self._send_error(400, 'No file provided')
+                return
+            
+            file_item = form['file']
+            if not file_item.filename:
+                self._send_error(400, 'No file selected')
+                return
+            
+            print(f"📁 파일명: {file_item.filename}")
+            
+            if not allowed_file(file_item.filename):
+                self._send_error(400, f'Unsupported file type. Allowed: {ALLOWED_EXTENSIONS}')
+                return
+            
+            # 파일 데이터 읽기
+            file_data = file_item.file.read()
+            file_size = len(file_data)
             print(f"📊 파일 크기: {file_size} bytes")
             
             if file_size > MAX_FILE_SIZE:
-                return jsonify({'error': 'File too large (max 10MB)'}), 400, headers
+                self._send_error(400, 'File too large (max 10MB)')
+                return
             
             if file_size == 0:
-                return jsonify({'error': 'Empty file'}), 400, headers
+                self._send_error(400, 'Empty file')
+                return
             
             # 임시 파일 생성
-            file_extension = secure_filename(file.filename).rsplit('.', 1)[1].lower()
+            file_extension = file_item.filename.rsplit('.', 1)[1].lower()
             
             with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_extension}') as temp_file:
-                temp_file.write(file_content)
+                temp_file.write(file_data)
                 temp_file_path = temp_file.name
             
             print(f"💾 임시 파일 생성: {temp_file_path}")
@@ -87,50 +107,47 @@ def handler(request):
                 
                 print(f"✅ 변환 완료! {len(note_events)} 개 노트 감지")
                 
-                # MIDI 데이터를 메모리로
+                # MIDI 데이터를 바이트로 변환
                 midi_buffer = io.BytesIO()
                 midi_data.write(midi_buffer)
-                midi_buffer.seek(0)
+                midi_bytes = midi_buffer.getvalue()
                 
-                print(f"🎹 MIDI 파일 크기: {len(midi_buffer.getvalue())} bytes")
+                print(f"🎹 MIDI 파일 크기: {len(midi_bytes)} bytes")
                 
-                # 응답 생성
-                response = send_file(
-                    midi_buffer,
-                    mimetype='audio/midi',
-                    as_attachment=True,
-                    download_name='converted.mid'
-                )
+                # MIDI 파일 응답
+                self.send_response(200)
+                self.send_header('Content-Type', 'audio/midi')
+                self.send_header('Content-Disposition', 'attachment; filename=converted.mid')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(midi_bytes)))
+                self.end_headers()
                 
-                # CORS 헤더 추가
-                for key, value in headers.items():
-                    response.headers[key] = value
-                
-                return response
+                self.wfile.write(midi_bytes)
                 
             except Exception as conversion_error:
                 print(f"❌ 변환 실패: {str(conversion_error)}")
                 print(f"📋 상세 오류: {traceback.format_exc()}")
                 
-                return jsonify({
-                    'error': 'Conversion failed',
-                    'details': str(conversion_error)
-                }), 500, headers
+                self._send_error(500, f'Conversion failed: {str(conversion_error)}')
                 
             finally:
                 # 임시 파일 삭제
                 if os.path.exists(temp_file_path):
                     os.unlink(temp_file_path)
                     print("🗑️ 임시 파일 삭제")
-            
+        
         except Exception as e:
             print(f"❌ 서버 오류: {str(e)}")
             print(f"📋 상세 오류: {traceback.format_exc()}")
             
-            return jsonify({
-                'error': 'Server error',
-                'details': str(e)
-            }), 500, headers
+            self._send_error(500, f'Server error: {str(e)}')
     
-    # 지원하지 않는 메소드
-    return jsonify({'error': 'Method not allowed'}), 405, headers
+    def _send_error(self, status_code, message):
+        """에러 응답 전송"""
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        
+        error_data = {'error': message}
+        self.wfile.write(json.dumps(error_data).encode())
