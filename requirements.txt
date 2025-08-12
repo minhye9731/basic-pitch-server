@@ -1,5 +1,5 @@
-Flask==2.3.3
-Werkzeug==2.3.7
+flask>=2.0.0
+werkzeug
 
 # Python 3.11 호환 버전들
 setuptools
