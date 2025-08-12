@@ -4,8 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-flask = 2.3.3
-werkzeug = 2.3.7
+flask = "*"
+werkzeug = "*"
 setuptools = "*"
 wheel = "*"
 tensorflow = ">=2.15.0,<2.16.0"
