@@ -1,5 +1,5 @@
-flask>=2.0.0
-werkzeug
+Flask>=2.0.0
+Werkzeug
 
 # Python 3.11 호환 버전들
 setuptools
